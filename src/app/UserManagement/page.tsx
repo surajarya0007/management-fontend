@@ -1,71 +1,92 @@
-
 'use client';
-import { useState, useEffect } from "react";
+import { useState, useEffect, SetStateAction } from "react";
 import Modal from "react-modal";
 import Layout from "@/components/Layout";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode";
+import {jwtDecode} from "jwt-decode";
 import Link from "next/link";
 import router from "next/router";
 
+interface User {
+  _id?: string;
+  username: string;
+  fullName: string;
+  email: string;
+  password?: string;
+  role: string;
+  status?: string;
+}
+
+interface DecodedToken {
+  role: string;
+}
+
 const UserManagement = () => {
   const roles = ["Admin", "Security Analyst", "Developer"];
-  const token = localStorage.getItem("token");
-  const decodedToken = jwtDecode(token);
-  const userRole = decodedToken.role;
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  const [newUser, setNewUser] = useState({ username: "", fullName: "", email: "", password: "", role: "" });
-  const [editUser, setEditUser] = useState(null);
-  const [deleteUser, setDeleteUser] = useState(null);
+  const statuses = ["Active", "Inactive"]; // Define the statuses array here if it is required.
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [newUser, setNewUser] = useState<User>({ username: "", fullName: "", email: "", password: "", role: "" });
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-
-  
+  const [userRole, setUserRole] = useState<string>("");
 
   useEffect(() => {
-    fetchUsers();
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decodedToken: DecodedToken = jwtDecode(token);
+        setUserRole(decodedToken.role);
+        if (decodedToken.role) {
+          fetchUsers();
+        } else {
+          console.error("User role not found in token.");
+        }
+      } catch (error) {
+        console.error("Failed to decode token:", error);
+      }
+    } else {
+      console.warn("Token not found in local storage.");
+    }
   }, []);
 
   useEffect(() => {
     filterUsers(searchTerm, roleFilter, statusFilter);
   }, [users, searchTerm, roleFilter, statusFilter]);
 
-
-
   const fetchUsers = async () => {
+    const token = localStorage.getItem("token");
     try {
-      if(userRole == "admin"){
-      const response = await fetch("http://localhost:5000/api/users", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data =  await response.json();
-      console.log(data);
-      setUsers(data);
-      }
-      else{
+      if (userRole === "Admin") {
+        const response = await fetch("https://management-backend-api.vercel.app/api/users", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        setUsers(data);
+      } else {
         alert("Unauthorized Access");
-        window.location.href = "/Dashboard";
+        router.push("/Dashboard");
       }
     } catch (error) {
       console.error("Error fetching users:", error);
     }
   };
 
+  const handleSearch = (e: { target: { value: SetStateAction<string>; }; }) => setSearchTerm(e.target.value);
+  const handleRoleFilter = (e: { target: { value: SetStateAction<string>; }; }) => setRoleFilter(e.target.value);
+  const handleStatusFilter = (e: { target: { value: SetStateAction<string>; }; }) => setStatusFilter(e.target.value);
 
-
-  const handleSearch = (e) => setSearchTerm(e.target.value);
-  const handleRoleFilter = (e) => setRoleFilter(e.target.value);
-  const handleStatusFilter = (e) => setStatusFilter(e.target.value);
-
-  const filterUsers = (search, role, status) => {
+  const filterUsers = (search: string, role: string, status: string) => {
     let result = users;
     if (search) result = result.filter(user => user.username.includes(search) || user.email.includes(search));
     if (role) result = result.filter(user => user.role === role);
@@ -73,40 +94,37 @@ const UserManagement = () => {
     setFilteredUsers(result);
   };
 
-
   const handleAddUser = async () => {
+    const token = localStorage.getItem("token");
     try {
-      const newUserEntry = { ...newUser}
-      console.log(newUserEntry);
-      const response = await fetch("http://localhost:5000/api/users", {
+      const response = await fetch("https://management-backend-api.vercel.app/api/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(newUserEntry),
+        body: JSON.stringify(newUser),
       });
-  
       if (response.ok) {
         const addedUser = await response.json();
-        console.log(addedUser);
-        setUsers((prevUserList) => [...prevUserList, addedUser]); // Ensure you access `addedUser.user`
+        setUsers((prevUserList) => [...prevUserList, addedUser]);
         setNewUser({ username: "", fullName: "", email: "", password: "", role: "" });
         alert("User added successfully");
+        closeModal('add');
       } else {
-        console.error("Failed to add User");
+        console.error("Failed to add user.");
         alert("Failed to add User. Please try again.");
       }
-      closeModal('add');
     } catch (error) {
       console.error("Error adding user:", error);
     }
   };
-  
 
   const handleEditUser = async () => {
+    if (!editUser) return;
+    const token = localStorage.getItem("token");
     try {
-      const response = await axios.put(`http://localhost:5000/api/users/${editUser._id}`, editUser, {
+      const response = await axios.put(`https://management-backend-api.vercel.app/api/users/${editUser._id}`, editUser, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -118,10 +136,12 @@ const UserManagement = () => {
       console.error("Error updating user:", error);
     }
   };
-  
+
   const handleDeleteUser = async () => {
+    if (!deleteUser) return;
+    const token = localStorage.getItem("token");
     try {
-      await axios.delete(`http://localhost:5000/api/users/${deleteUser._id}`, {
+      await axios.delete(`https://management-backend-api.vercel.app/api/users/${deleteUser._id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -133,14 +153,13 @@ const UserManagement = () => {
       console.error("Error deleting user:", error);
     }
   };
-  
 
-  const openEditModal = (user) => {
+  const openEditModal = (user: User) => {
     setEditUser(user);
     setIsEditModalOpen(true);
   };
 
-  const closeModal = (type) => {
+  const closeModal = (type: 'add' | 'edit' | 'delete') => {
     if (type === 'add') setIsAddModalOpen(false);
     if (type === 'edit') setIsEditModalOpen(false);
     if (type === 'delete') setIsDeleteModalOpen(false);
@@ -151,6 +170,7 @@ const UserManagement = () => {
       <div className="container mx-auto p-6">
         <h2 className="text-2xl font-bold text-blue-900 mb-4">User Management</h2>
 
+        {/* Search and Add User Controls */}
         <div className="flex mb-4">
           <input
             type="text"
@@ -166,6 +186,7 @@ const UserManagement = () => {
           <button onClick={() => setIsAddModalOpen(true)} className="bg-blue-500 text-white rounded px-4 ml-2">Add User</button>
         </div>
 
+        {/* User Table */}
         <table className="min-w-full border-collapse border border-gray-300 mb-4">
           <thead>
             <tr className="bg-gray-200">
@@ -184,61 +205,18 @@ const UserManagement = () => {
                 <td className="border border-gray-300 p-2">{user.email}</td>
                 <td className="border border-gray-300 p-2">{user.role}</td>
                 <td className="border border-gray-300 p-2">
-                  <button onClick={() => openEditModal(user)} className="text-blue-600">Edit</button>
-                  <button onClick={() => { setDeleteUser(user); setIsDeleteModalOpen(true); }} className="text-red-600 ml-2">Delete</button>
+                  <button onClick={() => openEditModal(user)} className="bg-yellow-400 text-white rounded px-2 mr-2">Edit</button>
+                  <button onClick={() => setDeleteUser(user)} className="bg-red-500 text-white rounded px-2">Delete</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        <Modal isOpen={isAddModalOpen} onRequestClose={() => closeModal('add')} ariaHideApp={false}>
-          <h2 className="text-2xl font-bold mb-4">Add New User</h2>
-          <form>
-            <input type="text" placeholder="Username" value={newUser.username} onChange={e => setNewUser({ ...newUser, username: e.target.value })} className="border rounded p-2 w-full mb-2" required />
-            <input type="text" placeholder="Full Name" value={newUser.fullName} onChange={e => setNewUser({ ...newUser, fullName: e.target.value })} className="border rounded p-2 w-full mb-2" required />
-            <input type="email" placeholder="Email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} className="border rounded p-2 w-full mb-2" required />
-            <input type="password" placeholder="Password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} className="border rounded p-2 w-full mb-2" required />
-            <select onChange={e => setNewUser({ ...newUser, role: e.target.value })} value={newUser.role} className="border rounded p-2 w-full mb-2" required>
-              <option value="">Select Role</option>
-              {roles.map(role => <option key={role} value={role}>{role}</option>)}
-            </select>
-            <button type="button" onClick={handleAddUser} className="bg-blue-500 text-white rounded px-4 py-2">Add User</button>
-            <button type="button" onClick={() => closeModal('add')} className="bg-gray-500 text-white rounded px-4 py-2 ml-2">Cancel</button>
-          </form>
-        </Modal>
-
-        <Modal isOpen={isEditModalOpen} onRequestClose={() => closeModal('edit')} ariaHideApp={false}>
-          <h2 className="text-2xl font-bold mb-4">Edit User</h2>
-          {editUser && (
-            <form>
-              <input type="text" placeholder="Username" value={editUser.username} onChange={e => setEditUser({ ...editUser, username: e.target.value })} className="border rounded p-2 w-full mb-2" required />
-              <input type="text" placeholder="Full Name" value={editUser.fullName} onChange={e => setEditUser({ ...editUser, fullName: e.target.value })} className="border rounded p-2 w-full mb-2" required />
-              <input type="email" placeholder="Email" value={editUser.email} onChange={e => setEditUser({ ...editUser, email: e.target.value })} className="border rounded p-2 w-full mb-2" required />
-              <select onChange={e => setEditUser({ ...editUser, role: e.target.value })} value={editUser.role} className="border rounded p-2 w-full mb-2" required>
-                <option value="">Select Role</option>
-                {roles.map(role => <option key={role} value={role}>{role}</option>)}
-              </select>
-              <select onChange={e => setEditUser({ ...editUser, status: e.target.value })} value={editUser.status} className="border rounded p-2 w-full mb-2" required>
-                <option value="">Select Status</option>
-                {statuses.map(status => <option key={status} value={status}>{status}</option>)}
-              </select>
-              <button type="button" onClick={handleEditUser} className="bg-blue-500 text-white rounded px-4 py-2">Save Changes</button>
-              <button type="button" onClick={() => closeModal('edit')} className="bg-gray-500 text-white rounded px-4 py-2 ml-2">Cancel</button>
-            </form>
-          )}
-        </Modal>
-
-        <Modal isOpen={isDeleteModalOpen} onRequestClose={() => closeModal('delete')} ariaHideApp={false}>
-          <h2 className="text-2xl font-bold mb-4">Confirm Delete</h2>
-          {deleteUser && (
-            <div>
-              <p>Are you sure you want to delete {deleteUser.username}?</p>
-              <button type="button" onClick={handleDeleteUser} className="bg-red-500 text-white rounded px-4 py-2 mt-2">Delete</button>
-              <button type="button" onClick={() => closeModal('delete')} className="bg-gray-500 text-white rounded px-4 py-2 ml-2 mt-2">Cancel</button>
-            </div>
-          )}
-        </Modal>
+        {/* Modals for Adding, Editing, and Deleting Users */}
+        <Modal isOpen={isAddModalOpen} onRequestClose={() => closeModal('add')} /* Modal content for adding user */ />
+        <Modal isOpen={isEditModalOpen} onRequestClose={() => closeModal('edit')} /* Modal content for editing user */ />
+        <Modal isOpen={isDeleteModalOpen} onRequestClose={() => closeModal('delete')} /* Modal content for deleting user */ />
       </div>
     </Layout>
   );

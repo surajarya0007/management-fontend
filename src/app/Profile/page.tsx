@@ -1,10 +1,28 @@
 'use client';
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react';
 import Layout from "@/components/Layout";
+
+interface UserInfo {
+  username: string;
+  email: string;
+  fullName: string;
+  phoneNumber: string;
+}
+
+interface PasswordInfo {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+interface NotificationSettings {
+  emailNotifications: boolean;
+  inAppNotifications: boolean;
+}
 
 const UserProfile = () => {
   // State to hold user information
-  const [userInfo, setUserInfo] = useState({
+  const [userInfo, setUserInfo] = useState<UserInfo>({
     username: "john_doe",
     email: "john.doe@example.com",
     fullName: "John Doe",
@@ -12,32 +30,32 @@ const UserProfile = () => {
   });
 
   // State for managing password changes
-  const [passwordInfo, setPasswordInfo] = useState({
+  const [passwordInfo, setPasswordInfo] = useState<PasswordInfo>({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
 
   // State for managing notification settings
-  const [notificationSettings, setNotificationSettings] = useState({
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     emailNotifications: true,
     inAppNotifications: true,
   });
 
   // Handle changes in user information
-  const handleUserInfoChange = (e) => {
+  const handleUserInfoChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setUserInfo(prev => ({ ...prev, [name]: value }));
   };
 
   // Handle changes in password
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPasswordInfo(prev => ({ ...prev, [name]: value }));
   };
 
   // Handle changes in notification settings
-  const handleNotificationChange = (e) => {
+  const handleNotificationChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
     setNotificationSettings(prev => ({ ...prev, [name]: checked }));
   };

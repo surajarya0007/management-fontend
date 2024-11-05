@@ -1,38 +1,44 @@
-'use client'
+'use client';
 import Link from "next/link";
 import Sidebar from "./Sidebar";
 import Image from "next/image";
-import { useState, useEffect, useRef } from "react";
-import { jwtDecode } from "jwt-decode";
+import { useState, useEffect, useRef, MouseEvent } from "react";
+import {jwtDecode} from "jwt-decode";
+import { useRouter } from "next/navigation";
+
+// Define a type for user data
+interface UserData {
+  name: string;
+  email: string;
+}
 
 const Header = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userData, setUserData] = useState({ name: "", email: "" });
-  const dropdownRef = useRef(null);
-
-
+  const [userData, setUserData] = useState<UserData>({ name: "", email: "" });
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       try {
-            const decodedToken = jwtDecode(token);
-            const user = { 
-              name: decodedToken.username, 
-              email: decodedToken.email
-            };
-            setUserData(user);
-            setIsLoggedIn(true);
-          } catch (error) {
-            console.error('Token decoding failed:', error);
-            setIsLoggedIn(false);
-          }
+        const decodedToken: { username: string; email: string } = jwtDecode(token);
+        const user = {
+          name: decodedToken.username,
+          email: decodedToken.email,
+        };
+        setUserData(user);
+        setIsLoggedIn(true);
+      } catch (error) {
+        console.error("Token decoding failed:", error);
+        setIsLoggedIn(false);
+      }
     } else {
-      window.location.href = "/Login";
+      router.push("/Login");
       setIsLoggedIn(false);
     }
-  }, []);
+  }, [router]);
 
   const toggleDropdown = () => {
     setDropdownOpen((prev) => !prev);
@@ -43,19 +49,19 @@ const Header = () => {
     localStorage.removeItem("token");
     setIsLoggedIn(false);
     setDropdownOpen(false);
-    window.location.href = "/Login";
+    router.push("/Login");
   };
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownOpen && dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownOpen && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside as unknown as EventListener);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside as unknown as EventListener);
     };
   }, [dropdownOpen]);
 

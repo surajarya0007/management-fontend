@@ -44,9 +44,9 @@ const LoginPage: React.FC = () => {
     try {
       let response;
       if (isLogin) {
-        response = await axios.post("http://localhost:5000/api/login", formData);
+        response = await axios.post("https://management-backend-api.vercel.app/api/login", formData);
       } else {
-        response = await axios.post("http://localhost:5000/api/user/signup", formData);
+        response = await axios.post("https://management-backend-api.vercel.app/api/user/signup", formData);
       }
       const { token } = response.data;
       if (token) {

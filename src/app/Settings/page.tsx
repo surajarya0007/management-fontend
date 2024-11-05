@@ -1,87 +1,130 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent } from 'react';
 import Layout from "@/components/Layout";
 
+// Define types for the state objects
+type GeneralSettings = {
+  appName: string;
+  environment: string;
+  baseURL: string;
+  loggingLevel: string;
+};
+
+type UserPreferences = {
+  language: string;
+  theme: string;
+  defaultLandingPage: string;
+};
+
+type Integration = {
+  id: number;
+  name: string;
+  type: string;
+  status: string;
+};
+
+type NewIntegration = {
+  name: string;
+  type: string;
+  apiKey: string;
+  webhookURL: string;
+};
+
+type AuditLogs = {
+  logLevel: string;
+  retentionPeriod: string;
+};
+
+type NotificationSettings = {
+  emailNotifications: boolean;
+  inAppNotifications: boolean;
+  scanResults: boolean;
+  apiChanges: boolean;
+};
+
+type Role = {
+  id: number;
+  name: string;
+  permissions: string[];
+};
+
+type NewRole = {
+  name: string;
+  permissions: string[];
+};
+
 const Settings = () => {
-  // State for general settings
-  const [generalSettings, setGeneralSettings] = useState({
+  const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
     appName: "API Security Shield",
     environment: "Development",
     baseURL: "https://api.example.com",
     loggingLevel: "Info",
   });
 
-  // State for user preferences
-  const [userPreferences, setUserPreferences] = useState({
+  const [userPreferences, setUserPreferences] = useState<UserPreferences>({
     language: "English",
     theme: "Light",
     defaultLandingPage: "Dashboard",
   });
 
-  // State for API integrations
-  const [integrations, setIntegrations] = useState([
+  const [integrations, setIntegrations] = useState<Integration[]>([
     { id: 1, name: "Jenkins", type: "CI/CD", status: "Active" },
     { id: 2, name: "Slack Notifications", type: "Monitoring", status: "Active" },
     { id: 3, name: "Sentry", type: "Monitoring", status: "Inactive" },
   ]);
-  
-  const [newIntegration, setNewIntegration] = useState({
+
+  const [newIntegration, setNewIntegration] = useState<NewIntegration>({
     name: "",
     type: "",
     apiKey: "",
     webhookURL: "",
   });
 
-  // State for audit logs settings
-  const [auditLogs, setAuditLogs] = useState({
+  const [auditLogs, setAuditLogs] = useState<AuditLogs>({
     logLevel: "Info",
     retentionPeriod: "30 days",
   });
 
-  // State for notification settings
-  const [notificationSettings, setNotificationSettings] = useState({
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     emailNotifications: true,
     inAppNotifications: true,
     scanResults: true,
     apiChanges: true,
   });
 
-  // State for role management
-  const [roles, setRoles] = useState([
-    { id: 1, name: "Admin", permissions: "All Permissions" },
-    { id: 2, name: "Security Analyst", permissions: "View Scans, Manage APIs" },
-    { id: 3, name: "Developer", permissions: "Add APIs, View Reports" },
+  const [roles, setRoles] = useState<Role[]>([
+    { id: 1, name: "Admin", permissions: ["All Permissions"] },
+    { id: 2, name: "Security Analyst", permissions: ["View Scans", "Manage APIs"] },
+    { id: 3, name: "Developer", permissions: ["Add APIs", "View Reports"] },
   ]);
-  
-  const [newRole, setNewRole] = useState({
+
+  const [newRole, setNewRole] = useState<NewRole>({
     name: "",
     permissions: [],
   });
 
   // Handlers for general settings
-  const handleGeneralSettingsChange = (e) => {
+  const handleGeneralSettingsChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setGeneralSettings((prev) => ({ ...prev, [name]: value }));
   };
 
   const saveGeneralSettings = () => {
     alert("General settings saved!");
-    // Implement saving logic (e.g., API call)
   };
 
   // Handlers for user preferences
-  const handleUserPreferencesChange = (e) => {
+  const handleUserPreferencesChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setUserPreferences((prev) => ({ ...prev, [name]: value }));
   };
 
   const saveUserPreferences = () => {
     alert("User preferences saved!");
-    // Implement saving logic (e.g., API call)
   };
 
   // Handlers for integrations
-  const handleIntegrationChange = (e) => {
+  const handleIntegrationChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewIntegration((prev) => ({ ...prev, [name]: value }));
   };
@@ -99,35 +142,33 @@ const Settings = () => {
     }
   };
 
-  const deleteIntegration = (id) => {
+  const deleteIntegration = (id: number) => {
     setIntegrations((prev) => prev.filter((integration) => integration.id !== id));
     alert("Integration deleted!");
   };
 
   // Handlers for audit logs settings
-  const handleAuditLogsChange = (e) => {
+  const handleAuditLogsChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setAuditLogs((prev) => ({ ...prev, [name]: value }));
   };
 
   const saveAuditLogsSettings = () => {
     alert("Audit logs settings saved!");
-    // Implement saving logic (e.g., API call)
   };
 
   // Handlers for notification settings
-  const handleNotificationChange = (e) => {
+  const handleNotificationChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
     setNotificationSettings((prev) => ({ ...prev, [name]: checked }));
   };
 
   const saveNotificationSettings = () => {
     alert("Notification settings saved!");
-    // Implement saving logic (e.g., API call)
   };
 
   // Handlers for role management
-  const handleRoleChange = (e) => {
+  const handleRoleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setNewRole((prev) => ({ ...prev, [name]: value }));
   };
@@ -142,11 +183,10 @@ const Settings = () => {
     }
   };
 
-  const deleteRole = (id) => {
+  const deleteRole = (id: number) => {
     setRoles((prev) => prev.filter((role) => role.id !== id));
     alert("Role deleted!");
   };
-
   return (
     <Layout>
       <div className="container mx-auto p-6">

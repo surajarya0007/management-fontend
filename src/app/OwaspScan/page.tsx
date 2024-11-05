@@ -1,11 +1,24 @@
-
 'use client';
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react';
 import Layout from "@/components/Layout";
 
-const SecurityScans = () => {
+// Define types for Scan and ScanConfig
+interface Scan {
+  id: number;
+  scanDate: string;
+  apiName: string;
+  results: string;
+  vulnerabilitiesDetected: number;
+}
+
+interface ScanConfig {
+  frequency: string;
+  typesOfChecks: string[];
+}
+
+const SecurityScans: React.FC = () => {
   // Dummy data for scan history
-  const [scanHistory, setScanHistory] = useState([
+  const [scanHistory, setScanHistory] = useState<Scan[]>([
     {
       id: 1,
       scanDate: "2024-08-01",
@@ -30,18 +43,17 @@ const SecurityScans = () => {
   ]);
 
   // State to manage scan configurations
-  const [scanConfig, setScanConfig] = useState({
+  const [scanConfig, setScanConfig] = useState<ScanConfig>({
     frequency: "Weekly",
     typesOfChecks: [],
   });
 
   // Dummy function to initiate a new scan
   const initiateNewScan = () => {
-    // Here you would typically call your API to start a scan
-    const newScan = {
+    const newScan: Scan = {
       id: scanHistory.length + 1,
       scanDate: new Date().toISOString().split('T')[0],
-      apiName: "API 1", // This would be dynamic based on user selection
+      apiName: "API 1",
       results: "In Progress",
       vulnerabilitiesDetected: 0,
     };
@@ -49,19 +61,19 @@ const SecurityScans = () => {
   };
 
   // Function to handle configuration changes
-  const handleConfigChange = (e) => {
+  const handleConfigChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setScanConfig(prev => ({
+    setScanConfig((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   // Function to toggle types of checks
-  const toggleCheckType = (checkType) => {
-    setScanConfig(prev => {
+  const toggleCheckType = (checkType: string) => {
+    setScanConfig((prev) => {
       const typesOfChecks = prev.typesOfChecks.includes(checkType)
-        ? prev.typesOfChecks.filter(type => type !== checkType)
+        ? prev.typesOfChecks.filter((type) => type !== checkType)
         : [...prev.typesOfChecks, checkType];
       return { ...prev, typesOfChecks };
     });

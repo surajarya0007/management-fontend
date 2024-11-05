@@ -1,7 +1,6 @@
 'use client';
 import Layout from "@/components/Layout";
 import { jwtDecode } from "jwt-decode";
-import { redirect } from "next/dist/server/api-utils";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -30,22 +29,16 @@ interface NewApi {
   version: string;
   role: string;
 }
-  const token = localStorage.getItem("token");
-  if(!token){
-    window.location.href = "/Login";
-  }
-  const decodedToken = jwtDecode(token);
-  const userRole = decodedToken.role;
 
-  
-  const ApiInventory: React.FC = () => {
+const ApiInventory: React.FC = () => {
+  const [userRole, setUserRole] = useState<string>('');
   const [apiList, setApiList] = useState<Api[]>([]);
   const [newApi, setNewApi] = useState<NewApi>({
     name: "",
     endpoint: "",
     owner: "",
     status: "Active",
-    role: userRole,
+    role: "",
     lastScanned: "",
     version: "",
     description: ""
@@ -55,20 +48,37 @@ interface NewApi {
   const [sortDirection, setSortDirection] = useState<"ascending" | "descending">("ascending");
 
   useEffect(() => {
-    
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      window.location.href = "/Login";
+      return;
+    }
+
+    try {
+      const decodedToken: { role: string } = jwtDecode(token);
+      setUserRole(decodedToken.role);
+    } catch (error) {
+      console.error("Token decoding error:", error);
+      window.location.href = "/Login";
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchApiData = async () => {
       try {
-            
-            const URL = `http://localhost:5000/api/${userRole}/api`;
-            const response = await fetch(URL, {
+        const URL = `https://management-backend-api.vercel.app/api/${userRole}/api`;
+        const response = await fetch(URL, {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
+
         if (!response.ok) {
           throw new Error(`Error fetching API data: ${response.statusText}`);
         }
+
         const data: Api[] = await response.json();
         setApiList(data);
       } catch (error) {
@@ -76,29 +86,30 @@ interface NewApi {
       }
     };
 
-    fetchApiData();
+    if (userRole) {
+      fetchApiData();
+    }
 
-      // Setup WebSocket connection
-  const ws = new WebSocket('ws://localhost:8080');
-  
-  ws.onopen = () => {
-    console.log('Connected to WebSocket');
-  };
+    // Setup WebSocket connection
+    const ws = new WebSocket('ws://localhost:8080');
 
-  ws.onmessage = (event) => {
-    const newApi = JSON.parse(event.data);
-    setApiList(prevApiList => [...prevApiList, newApi]);
-  };
+    ws.onopen = () => {
+      console.log('Connected to WebSocket');
+    };
 
-  ws.onclose = () => {
-    console.log('Disconnected from WebSocket');
-  };
+    ws.onmessage = (event) => {
+      const newApi = JSON.parse(event.data);
+      setApiList(prevApiList => [...prevApiList, newApi]);
+    };
 
-  return () => {
-    ws.close();
-  };
-  
-  }, []);
+    ws.onclose = () => {
+      console.log('Disconnected from WebSocket');
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [userRole]);
 
   const filteredApiList = apiList.filter(api =>
     api.name && api.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -131,11 +142,10 @@ interface NewApi {
 
   const handleAddApi = async () => {
     const token = localStorage.getItem("token");
-    const newApiEntry = { ...newApi };
-    console.log(newApiEntry);
+    const newApiEntry = { ...newApi, role: userRole };
 
     try {
-      const response = await fetch("http://localhost:5000/api/api/add", {
+      const response = await fetch("https://management-backend-api.vercel.app/api/api/add", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -146,14 +156,13 @@ interface NewApi {
 
       if (response.ok) {
         const addedApi: Api = await response.json();
-        // Update the API list and reset the form
         setApiList((prevApiList) => [...prevApiList, addedApi]);
         setNewApi({
           name: "",
           endpoint: "",
           owner: "",
           status: "Active",
-          role: "",
+          role: userRole,
           lastScanned: "",
           version: "",
           description: ""
