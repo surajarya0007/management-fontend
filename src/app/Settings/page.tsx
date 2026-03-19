@@ -1,591 +1,325 @@
 'use client';
 import React, { useState, ChangeEvent } from 'react';
 import Layout from "@/components/Layout";
+import { motion } from "framer-motion";
+import { springSnappy, staggerContainer, staggerItem } from "@/lib/motion";
 
-// Define types for the state objects
-type GeneralSettings = {
-  appName: string;
-  environment: string;
-  baseURL: string;
-  loggingLevel: string;
+type GeneralSettings = { appName: string; environment: string; baseURL: string; loggingLevel: string; };
+type UserPreferences = { language: string; theme: string; defaultLandingPage: string; };
+type Integration = { id: number; name: string; type: string; status: string; };
+type NewIntegration = { name: string; type: string; apiKey: string; webhookURL: string; };
+type AuditLogs = { logLevel: string; retentionPeriod: string; };
+type NotificationSettings = { emailNotifications: boolean; inAppNotifications: boolean; scanResults: boolean; apiChanges: boolean; };
+type Role = { id: number; name: string; permissions: string[]; };
+type NewRole = { name: string; permissions: string[]; };
+
+const card = { background: '#0f1314', border: '1px solid #1f2e2d', borderRadius: '12px' };
+const cardHeader = { borderBottom: '1px solid #1f2e2d' };
+const inputStyle: React.CSSProperties = {
+  background: '#0a0d0d', border: '1px solid #1f2e2d',
+  color: '#f0fdfa', borderRadius: '8px', padding: '10px 12px',
+  fontSize: '13px', outline: 'none', width: '100%', transition: 'border-color 0.15s',
 };
 
-type UserPreferences = {
-  language: string;
-  theme: string;
-  defaultLandingPage: string;
-};
+const SectionHeader = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
+  <div className="flex items-center gap-2 mb-5 pb-4" style={cardHeader}>
+    <motion.div
+      className="w-7 h-7 rounded-lg flex items-center justify-center"
+      style={{ background: 'rgba(13,148,136,0.1)', color: '#0d9488' }}
+      whileHover={{ scale: 1.08, rotate: -4 }}
+      transition={springSnappy}
+    >
+      {icon}
+    </motion.div>
+    <h3 className="text-sm font-semibold text-white">{title}</h3>
+  </div>
+);
 
-type Integration = {
-  id: number;
-  name: string;
-  type: string;
-  status: string;
-};
+const SaveBtn = ({ onClick }: { onClick: () => void }) => (
+  <motion.button
+    onClick={onClick}
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.97 }}
+    className="inline-flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors mt-5"
+    style={{ background: '#0d9488' }}
+    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#14b8a6'; }}
+    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#0d9488'; }}
+  >
+    Save Changes
+  </motion.button>
+);
 
-type NewIntegration = {
-  name: string;
-  type: string;
-  apiKey: string;
-  webhookURL: string;
-};
-
-type AuditLogs = {
-  logLevel: string;
-  retentionPeriod: string;
-};
-
-type NotificationSettings = {
-  emailNotifications: boolean;
-  inAppNotifications: boolean;
-  scanResults: boolean;
-  apiChanges: boolean;
-};
-
-type Role = {
-  id: number;
-  name: string;
-  permissions: string[];
-};
-
-type NewRole = {
-  name: string;
-  permissions: string[];
-};
+const fieldFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => { e.target.style.borderColor = '#14b8a6'; };
+const fieldBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => { e.target.style.borderColor = '#1f2e2d'; };
 
 const Settings = () => {
   const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
-    appName: "API Security Shield",
-    environment: "Development",
-    baseURL: "https://api.example.com",
-    loggingLevel: "Info",
+    appName: "API Security Shield", environment: "Development",
+    baseURL: "https://api.example.com", loggingLevel: "Info",
   });
-
   const [userPreferences, setUserPreferences] = useState<UserPreferences>({
-    language: "English",
-    theme: "Light",
-    defaultLandingPage: "Dashboard",
+    language: "English", theme: "Dark", defaultLandingPage: "Dashboard",
   });
-
   const [integrations, setIntegrations] = useState<Integration[]>([
     { id: 1, name: "Jenkins", type: "CI/CD", status: "Active" },
     { id: 2, name: "Slack Notifications", type: "Monitoring", status: "Active" },
     { id: 3, name: "Sentry", type: "Monitoring", status: "Inactive" },
   ]);
-
-  const [newIntegration, setNewIntegration] = useState<NewIntegration>({
-    name: "",
-    type: "",
-    apiKey: "",
-    webhookURL: "",
-  });
-
-  const [auditLogs, setAuditLogs] = useState<AuditLogs>({
-    logLevel: "Info",
-    retentionPeriod: "30 days",
-  });
-
+  const [newIntegration, setNewIntegration] = useState<NewIntegration>({ name: "", type: "", apiKey: "", webhookURL: "" });
+  const [auditLogs, setAuditLogs] = useState<AuditLogs>({ logLevel: "Info", retentionPeriod: "30 days" });
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
-    emailNotifications: true,
-    inAppNotifications: true,
-    scanResults: true,
-    apiChanges: true,
+    emailNotifications: true, inAppNotifications: true, scanResults: true, apiChanges: true,
   });
-
   const [roles, setRoles] = useState<Role[]>([
     { id: 1, name: "Admin", permissions: ["All Permissions"] },
     { id: 2, name: "Security Analyst", permissions: ["View Scans", "Manage APIs"] },
     { id: 3, name: "Developer", permissions: ["Add APIs", "View Reports"] },
   ]);
+  const [newRole, setNewRole] = useState<NewRole>({ name: "", permissions: [] });
 
-  const [newRole, setNewRole] = useState<NewRole>({
-    name: "",
-    permissions: [],
-  });
+  const togglePermission = (value: string) => setNewRole(prev => ({
+    ...prev,
+    permissions: prev.permissions.includes(value) ? prev.permissions.filter(p => p !== value) : [...prev.permissions, value],
+  }));
 
-  // Handlers for general settings
-  const handleGeneralSettingsChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setGeneralSettings((prev) => ({ ...prev, [name]: value }));
-  };
+  const allPermissions = ['View Scans', 'Manage APIs', 'Add APIs', 'View Reports'];
 
-  const saveGeneralSettings = () => {
-    alert("General settings saved!");
-  };
+  const selectStyle = { ...inputStyle, cursor: 'pointer' };
 
-  // Handlers for user preferences
-  const handleUserPreferencesChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setUserPreferences((prev) => ({ ...prev, [name]: value }));
-  };
+  const intStatusStyle = (status: string): React.CSSProperties =>
+    status === 'Active'
+      ? { background: 'rgba(16,185,129,0.1)', color: '#34d399', border: '1px solid rgba(16,185,129,0.2)' }
+      : { background: 'rgba(13,148,136,0.08)', color: '#5a7d78', border: '1px solid rgba(13,148,136,0.15)' };
 
-  const saveUserPreferences = () => {
-    alert("User preferences saved!");
-  };
-
-  // Handlers for integrations
-  const handleIntegrationChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setNewIntegration((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const addIntegration = () => {
-    if (newIntegration.name && newIntegration.type) {
-      setIntegrations((prev) => [
-        ...prev,
-        { id: integrations.length + 1, ...newIntegration, status: "Active" },
-      ]);
-      setNewIntegration({ name: "", type: "", apiKey: "", webhookURL: "" });
-      alert("Integration added!");
-    } else {
-      alert("Please fill in all fields!");
-    }
-  };
-
-  const deleteIntegration = (id: number) => {
-    setIntegrations((prev) => prev.filter((integration) => integration.id !== id));
-    alert("Integration deleted!");
-  };
-
-  // Handlers for audit logs settings
-  const handleAuditLogsChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setAuditLogs((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const saveAuditLogsSettings = () => {
-    alert("Audit logs settings saved!");
-  };
-
-  // Handlers for notification settings
-  const handleNotificationChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setNotificationSettings((prev) => ({ ...prev, [name]: checked }));
-  };
-
-  const saveNotificationSettings = () => {
-    alert("Notification settings saved!");
-  };
-
-  // Handlers for role management
-  const handleRoleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewRole((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const addRole = () => {
-    if (newRole.name) {
-      setRoles((prev) => [...prev, { id: roles.length + 1, ...newRole }]);
-      setNewRole({ name: "", permissions: [] });
-      alert("Role added!");
-    } else {
-      alert("Please enter a role name!");
-    }
-  };
-
-  const deleteRole = (id: number) => {
-    setRoles((prev) => prev.filter((role) => role.id !== id));
-    alert("Role deleted!");
-  };
   return (
     <Layout>
-      <div className="container mx-auto p-6">
-        <h2 className="text-2xl font-bold text-blue-900 mb-6">Settings</h2>
+      <motion.div
+        className="max-w-4xl mx-auto space-y-5"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={staggerItem}>
+          <h2 className="text-lg font-bold text-white">Settings</h2>
+          <p className="text-sm mt-0.5" style={{ color: '#0d9488' }}>Manage application configuration and preferences</p>
+        </motion.div>
 
-        {/* General Settings */}
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold text-blue-800 mb-4">General Settings</h3>
-          <div className="bg-white p-6 shadow rounded-lg">
-            <div className="mb-4">
-              <label className="block mb-2">Application Name:</label>
-              <input
-                type="text"
-                name="appName"
-                value={generalSettings.appName}
-                onChange={handleGeneralSettingsChange}
-                className="border border-gray-300 rounded w-full p-2"
-              />
+        {/* General */}
+        <motion.div style={card} className="p-5" variants={staggerItem} whileHover={{ boxShadow: '0 12px 40px rgba(0,0,0,0.28)' }}>
+          <SectionHeader title="General Settings"
+            icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#2dd4bf' }}>Application Name</label>
+              <input type="text" name="appName" value={generalSettings.appName} onChange={e => setGeneralSettings(p => ({ ...p, appName: e.target.value }))} style={inputStyle} onFocus={fieldFocus} onBlur={fieldBlur} />
             </div>
-            <div className="mb-4">
-              <label className="block mb-2">Environment:</label>
-              <select
-                name="environment"
-                value={generalSettings.environment}
-                onChange={handleGeneralSettingsChange}
-                className="border border-gray-300 rounded w-full p-2"
-              >
-                <option value="Development">Development</option>
-                <option value="Staging">Staging</option>
-                <option value="Production">Production</option>
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#2dd4bf' }}>Environment</label>
+              <select name="environment" value={generalSettings.environment} onChange={e => setGeneralSettings(p => ({ ...p, environment: e.target.value }))} style={selectStyle} onFocus={fieldFocus} onBlur={fieldBlur}>
+                {['Development', 'Staging', 'Production'].map(o => <option key={o} value={o} style={{ background: '#0a0d0d' }}>{o}</option>)}
               </select>
             </div>
-            <div className="mb-4">
-              <label className="block mb-2">Base URL:</label>
-              <input
-                type="text"
-                name="baseURL"
-                value={generalSettings.baseURL}
-                onChange={handleGeneralSettingsChange}
-                className="border border-gray-300 rounded w-full p-2"
-              />
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#2dd4bf' }}>Base URL</label>
+              <input type="text" name="baseURL" value={generalSettings.baseURL} onChange={e => setGeneralSettings(p => ({ ...p, baseURL: e.target.value }))} style={inputStyle} onFocus={fieldFocus} onBlur={fieldBlur} />
             </div>
-            <div className="mb-4">
-              <label className="block mb-2">Logging Level:</label>
-              <select
-                name="loggingLevel"
-                value={generalSettings.loggingLevel}
-                onChange={handleGeneralSettingsChange}
-                className="border border-gray-300 rounded w-full p-2"
-              >
-                <option value="Debug">Debug</option>
-                <option value="Info">Info</option>
-                <option value="Warning">Warning</option>
-                <option value="Error">Error</option>
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#2dd4bf' }}>Logging Level</label>
+              <select name="loggingLevel" value={generalSettings.loggingLevel} onChange={e => setGeneralSettings(p => ({ ...p, loggingLevel: e.target.value }))} style={selectStyle} onFocus={fieldFocus} onBlur={fieldBlur}>
+                {['Debug', 'Info', 'Warning', 'Error'].map(o => <option key={o} value={o} style={{ background: '#0a0d0d' }}>{o}</option>)}
               </select>
             </div>
-            <button onClick={saveGeneralSettings} className="bg-blue-600 text-white px-4 py-2 rounded">
-              Save Changes
-            </button>
           </div>
-        </section>
+          <SaveBtn onClick={() => {}} />
+        </motion.div>
 
         {/* User Preferences */}
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold text-blue-800 mb-4">User Preferences</h3>
-          <div className="bg-white p-6 shadow rounded-lg">
-            <div className="mb-4">
-              <label className="block mb-2">Language:</label>
-              <select
-                name="language"
-                value={userPreferences.language}
-                onChange={handleUserPreferencesChange}
-                className="border border-gray-300 rounded w-full p-2"
-              >
-                <option value="English">English</option>
-                <option value="Spanish">Spanish</option>
-                <option value="French">French</option>
-              </select>
-            </div>
-            <div className="mb-4">
-              <label className="block mb-2">Theme:</label>
-              <select
-                name="theme"
-                value={userPreferences.theme}
-                onChange={handleUserPreferencesChange}
-                className="border border-gray-300 rounded w-full p-2"
-              >
-                <option value="Light">Light</option>
-                <option value="Dark">Dark</option>
-              </select>
-            </div>
-            <div className="mb-4">
-              <label className="block mb-2">Default Landing Page:</label>
-              <select
-                name="defaultLandingPage"
-                value={userPreferences.defaultLandingPage}
-                onChange={handleUserPreferencesChange}
-                className="border border-gray-300 rounded w-full p-2"
-              >
-                <option value="Dashboard">Dashboard</option>
-                <option value="API Inventory">API Inventory</option>
-                <option value="Reports">Reports</option>
-              </select>
-            </div>
-            <button onClick={saveUserPreferences} className="bg-blue-600 text-white px-4 py-2 rounded">
-              Save Changes
-            </button>
+        <motion.div style={card} className="p-5" variants={staggerItem} whileHover={{ boxShadow: '0 12px 40px rgba(0,0,0,0.28)' }}>
+          <SectionHeader title="User Preferences"
+            icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { label: 'Language', name: 'language', opts: ['English', 'Spanish', 'French'], val: userPreferences.language, set: (v: string) => setUserPreferences(p => ({ ...p, language: v })) },
+              { label: 'Theme', name: 'theme', opts: ['Light', 'Dark'], val: userPreferences.theme, set: (v: string) => setUserPreferences(p => ({ ...p, theme: v })) },
+              { label: 'Default Landing Page', name: 'defaultLandingPage', opts: ['Dashboard', 'API Inventory', 'Reports'], val: userPreferences.defaultLandingPage, set: (v: string) => setUserPreferences(p => ({ ...p, defaultLandingPage: v })) },
+            ].map(f => (
+              <div key={f.name}>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: '#2dd4bf' }}>{f.label}</label>
+                <select value={f.val} onChange={e => f.set(e.target.value)} style={selectStyle} onFocus={fieldFocus} onBlur={fieldBlur}>
+                  {f.opts.map(o => <option key={o} value={o} style={{ background: '#0a0d0d' }}>{o}</option>)}
+                </select>
+              </div>
+            ))}
           </div>
-        </section>
+          <SaveBtn onClick={() => {}} />
+        </motion.div>
 
-        {/* API Integration Settings */}
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold text-blue-800 mb-4">API Integration Settings</h3>
-          <div className="bg-white p-6 shadow rounded-lg mb-4">
-            <table className="w-full text-left border-separate border-spacing-0">
-              <thead>
-                <tr className="bg-gray-200 text-gray-800">
-                  <th className="p-3 border-b border-gray-300">Integration Name</th>
-                  <th className="p-3 border-b border-gray-300">Integration Type</th>
-                  <th className="p-3 border-b border-gray-300">Status</th>
-                  <th className="p-3 border-b border-gray-300">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {integrations.map((integration) => (
-                  <tr key={integration.id} className={integration.id % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                    <td className="p-3 border-b border-gray-300">{integration.name}</td>
-                    <td className="p-3 border-b border-gray-300">{integration.type}</td>
-                    <td className="p-3 border-b border-gray-300">{integration.status}</td>
-                    <td className="p-3 border-b border-gray-300">
-                      <button onClick={() => deleteIntegration(integration.id)} className="text-red-600">
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
+        {/* Integrations */}
+        <motion.div style={card} className="p-5" variants={staggerItem} whileHover={{ boxShadow: '0 12px 40px rgba(0,0,0,0.28)' }}>
+          <SectionHeader title="API Integrations"
+            icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>}
+          />
+          <table className="w-full mb-5">
+            <thead>
+              <tr style={{ borderBottom: '1px solid #1f2e2d' }}>
+                {['Integration', 'Type', 'Status', ''].map(h => (
+                  <th key={h} className={`${h === '' ? 'text-right' : 'text-left'} pb-3 text-xs font-semibold uppercase tracking-wider`} style={{ color: '#0d9488' }}>{h}</th>
                 ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="bg-white p-6 shadow rounded-lg">
-            <h4 className="text-lg font-semibold mb-2">Add New Integration</h4>
-            <div className="mb-4">
-              <label className="block mb-2">Integration Name:</label>
-              <input
-                type="text"
-                name="name"
-                value={newIntegration.name}
-                onChange={handleIntegrationChange}
-                className="border border-gray-300 rounded w-full p-2"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block mb-2">Integration Type:</label>
-              <select
-                name="type"
-                value={newIntegration.type}
-                onChange={handleIntegrationChange}
-                className="border border-gray-300 rounded w-full p-2"
-              >
-                <option value="">Select Type</option>
-                <option value="CI/CD">CI/CD</option>
-                <option value="Monitoring">Monitoring</option>
+              </tr>
+            </thead>
+            <tbody>
+              {integrations.map(i => (
+                <tr key={i.id} style={{ borderBottom: '1px solid rgba(31,46,46,0.5)' }}>
+                  <td className="py-3 text-sm font-medium text-white">{i.name}</td>
+                  <td className="py-3 text-sm" style={{ color: '#5a7d78' }}>{i.type}</td>
+                  <td className="py-3"><span className="inline-flex px-2 py-0.5 rounded text-xs font-medium" style={intStatusStyle(i.status)}>{i.status}</span></td>
+                  <td className="py-3 text-right">
+                    <button onClick={() => setIntegrations(prev => prev.filter(x => x.id !== i.id))}
+                      className="text-xs px-2.5 py-1 rounded transition-colors"
+                      style={{ color: '#f87171' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.08)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="pt-4" style={{ borderTop: '1px solid #1f2e2d' }}>
+            <p className="text-xs font-semibold mb-3" style={{ color: '#2dd4bf' }}>Add New Integration</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input type="text" placeholder="Integration Name" value={newIntegration.name} onChange={e => setNewIntegration(p => ({ ...p, name: e.target.value }))} style={inputStyle} onFocus={fieldFocus} onBlur={fieldBlur} />
+              <select value={newIntegration.type} onChange={e => setNewIntegration(p => ({ ...p, type: e.target.value }))} style={selectStyle} onFocus={fieldFocus} onBlur={fieldBlur}>
+                <option value="" style={{ background: '#0a0d0d' }}>Select Type</option>
+                <option value="CI/CD" style={{ background: '#0a0d0d' }}>CI/CD</option>
+                <option value="Monitoring" style={{ background: '#0a0d0d' }}>Monitoring</option>
               </select>
+              <input type="text" placeholder="API Key / Secret" value={newIntegration.apiKey} onChange={e => setNewIntegration(p => ({ ...p, apiKey: e.target.value }))} style={inputStyle} onFocus={fieldFocus} onBlur={fieldBlur} />
+              <input type="text" placeholder="Webhook URL" value={newIntegration.webhookURL} onChange={e => setNewIntegration(p => ({ ...p, webhookURL: e.target.value }))} style={inputStyle} onFocus={fieldFocus} onBlur={fieldBlur} />
             </div>
-            <div className="mb-4">
-              <label className="block mb-2">API Key/Secret:</label>
-              <input
-                type="text"
-                name="apiKey"
-                value={newIntegration.apiKey}
-                onChange={handleIntegrationChange}
-                className="border border-gray-300 rounded w-full p-2"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block mb-2">Webhook URL:</label>
-              <input
-                type="text"
-                name="webhookURL"
-                value={newIntegration.webhookURL}
-                onChange={handleIntegrationChange}
-                className="border border-gray-300 rounded w-full p-2"
-              />
-            </div>
-            <button onClick={addIntegration} className="bg-blue-600 text-white px-4 py-2 rounded">
+            <button onClick={() => { if (newIntegration.name && newIntegration.type) { setIntegrations(prev => [...prev, { id: prev.length + 1, ...newIntegration, status: 'Active' }]); setNewIntegration({ name: '', type: '', apiKey: '', webhookURL: '' }); } }}
+              className="mt-3 inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              style={{ background: '#0a0d0d', border: '1px solid #1f2e2d', color: '#99f6e4' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(13,148,136,0.1)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#0a0d0d'; }}>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               Add Integration
             </button>
           </div>
-        </section>
+        </motion.div>
 
-        {/* Audit Logs Settings */}
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold text-blue-800 mb-4">Audit Logs Settings</h3>
-          <div className="bg-white p-6 shadow rounded-lg">
-            <div className="mb-4">
-              <label className="block mb-2">Log Level:</label>
-              <select
-                name="logLevel"
-                value={auditLogs.logLevel}
-                onChange={handleAuditLogsChange}
-                className="border border-gray-300 rounded w-full p-2"
-              >
-                <option value="Info">Info</option>
-                <option value="Warning">Warning</option>
-                <option value="Error">Error</option>
+        {/* Audit Logs */}
+        <motion.div style={card} className="p-5" variants={staggerItem} whileHover={{ boxShadow: '0 12px 40px rgba(0,0,0,0.28)' }}>
+          <SectionHeader title="Audit Log Settings"
+            icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#2dd4bf' }}>Log Level</label>
+              <select name="logLevel" value={auditLogs.logLevel} onChange={e => setAuditLogs(p => ({ ...p, logLevel: e.target.value }))} style={selectStyle} onFocus={fieldFocus} onBlur={fieldBlur}>
+                {['Info', 'Warning', 'Error'].map(o => <option key={o} value={o} style={{ background: '#0a0d0d' }}>{o}</option>)}
               </select>
             </div>
-            <div className="mb-4">
-              <label className="block mb-2">Log Retention Period:</label>
-              <input
-                type="text"
-                name="retentionPeriod"
-                value={auditLogs.retentionPeriod}
-                onChange={handleAuditLogsChange}
-                className="border border-gray-300 rounded w-full p-2"
-              />
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#2dd4bf' }}>Retention Period</label>
+              <input type="text" name="retentionPeriod" value={auditLogs.retentionPeriod} onChange={e => setAuditLogs(p => ({ ...p, retentionPeriod: e.target.value }))} style={inputStyle} onFocus={fieldFocus} onBlur={fieldBlur} />
             </div>
-            <button onClick={saveAuditLogsSettings} className="bg-blue-600 text-white px-4 py-2 rounded">
-              Save Changes
-            </button>
           </div>
-        </section>
+          <SaveBtn onClick={() => {}} />
+        </motion.div>
 
-        {/* Notification Settings */}
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold text-blue-800 mb-4">Notification Settings</h3>
-          <div className="bg-white p-6 shadow rounded-lg">
-            <div className="mb-4">
-              <label className="inline-flex items-center">
-                <input
-                  type="checkbox"
-                  name="emailNotifications"
-                  checked={notificationSettings.emailNotifications}
-                  onChange={handleNotificationChange}
-                  className="form-checkbox"
-                />
-                <span className="ml-2">Email Notifications</span>
-              </label>
-            </div>
-            <div className="mb-4">
-              <label className="inline-flex items-center">
-                <input
-                  type="checkbox"
-                  name="inAppNotifications"
-                  checked={notificationSettings.inAppNotifications}
-                  onChange={handleNotificationChange}
-                  className="form-checkbox"
-                />
-                <span className="ml-2">In-App Notifications</span>
-              </label>
-            </div>
-            <div className="mb-4">
-              <label className="inline-flex items-center">
-                <input
-                  type="checkbox"
-                  name="scanResults"
-                  checked={notificationSettings.scanResults}
-                  onChange={handleNotificationChange}
-                  className="form-checkbox"
-                />
-                <span className="ml-2">Scan Results Notifications</span>
-              </label>
-            </div>
-            <div className="mb-4">
-              <label className="inline-flex items-center">
-                <input
-                  type="checkbox"
-                  name="apiChanges"
-                  checked={notificationSettings.apiChanges}
-                  onChange={handleNotificationChange}
-                  className="form-checkbox"
-                />
-                <span className="ml-2">API Changes Notifications</span>
-              </label>
-            </div>
-            <button onClick={saveNotificationSettings} className="bg-blue-600 text-white px-4 py-2 rounded">
-              Save Changes
-            </button>
+        {/* Notifications */}
+        <motion.div style={card} className="p-5" variants={staggerItem} whileHover={{ boxShadow: '0 12px 40px rgba(0,0,0,0.28)' }}>
+          <SectionHeader title="Notification Settings"
+            icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-5">
+            {(['emailNotifications', 'inAppNotifications', 'scanResults', 'apiChanges'] as const).map(k => {
+              const labels: Record<string, string> = { emailNotifications: 'Email Notifications', inAppNotifications: 'In-App Notifications', scanResults: 'Scan Results', apiChanges: 'API Changes' };
+              return (
+                <label key={k} className="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors"
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(13,148,136,0.05)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                  <div className="w-9 h-5 rounded-full relative shrink-0 transition-colors"
+                    style={{ background: notificationSettings[k] ? '#0d9488' : '#0a0d0d', border: '1px solid #1f2e2d' }}>
+                    <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
+                      style={{ transform: notificationSettings[k] ? 'translateX(16px)' : 'translateX(0)' }} />
+                    <input type="checkbox" name={k} checked={notificationSettings[k]} onChange={(e: ChangeEvent<HTMLInputElement>) => setNotificationSettings(p => ({ ...p, [k]: e.target.checked }))} className="sr-only" />
+                  </div>
+                  <span className="text-sm" style={{ color: '#99f6e4' }}>{labels[k]}</span>
+                </label>
+              );
+            })}
           </div>
-        </section>
+          <SaveBtn onClick={() => {}} />
+        </motion.div>
 
-        {/* Role Management */}
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold text-blue-800 mb-4">Role and Permission Management</h3>
-          <div className="bg-white p-6 shadow rounded-lg mb-4">
-            <table className="w-full text-left border-separate border-spacing-0">
-              <thead>
-                <tr className="bg-gray-200 text-gray-800">
-                  <th className="p-3 border-b border-gray-300">Role Name</th>
-                  <th className="p-3 border-b border-gray-300">Permissions</th>
-                  <th className="p-3 border-b border-gray-300">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roles.map((role) => (
-                  <tr key={role.id} className={role.id % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                    <td className="p-3 border-b border-gray-300">{role.name}</td>
-                    <td className="p-3 border-b border-gray-300">{role.permissions}</td>
-                    <td className="p-3 border-b border-gray-300">
-                      <button onClick={() => deleteRole(role.id)} className="text-red-600">
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
+        {/* Roles */}
+        <motion.div style={card} className="p-5" variants={staggerItem} whileHover={{ boxShadow: '0 12px 40px rgba(0,0,0,0.28)' }}>
+          <SectionHeader title="Role & Permission Management"
+            icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>}
+          />
+          <table className="w-full mb-5">
+            <thead>
+              <tr style={{ borderBottom: '1px solid #1f2e2d' }}>
+                {['Role', 'Permissions', ''].map(h => (
+                  <th key={h} className={`${h === '' ? 'text-right' : 'text-left'} pb-3 text-xs font-semibold uppercase tracking-wider`} style={{ color: '#0d9488' }}>{h}</th>
                 ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="bg-white p-6 shadow rounded-lg">
-            <h4 className="text-lg font-semibold mb-2">Add New Role</h4>
-            <div className="mb-4">
-              <label className="block mb-2">Role Name:</label>
-              <input
-                type="text"
-                name="name"
-                value={newRole.name}
-                onChange={handleRoleChange}
-                className="border border-gray-300 rounded w-full p-2"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block mb-2">Permissions:</label>
-              <div className="flex flex-col">
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    value="View Scans"
-                    onChange={(e) => {
-                      const { value, checked } = e.target;
-                      setNewRole((prev) => {
-                        const permissions = checked
-                          ? [...prev.permissions, value]
-                          : prev.permissions.filter((p) => p !== value);
-                        return { ...prev, permissions };
-                      });
-                    }}
-                    className="form-checkbox"
-                  />
-                  <span className="ml-2">View Scans</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    value="Manage APIs"
-                    onChange={(e) => {
-                      const { value, checked } = e.target;
-                      setNewRole((prev) => {
-                        const permissions = checked
-                          ? [...prev.permissions, value]
-                          : prev.permissions.filter((p) => p !== value);
-                        return { ...prev, permissions };
-                      });
-                    }}
-                    className="form-checkbox"
-                  />
-                  <span className="ml-2">Manage APIs</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    value="Add APIs"
-                    onChange={(e) => {
-                      const { value, checked } = e.target;
-                      setNewRole((prev) => {
-                        const permissions = checked
-                          ? [...prev.permissions, value]
-                          : prev.permissions.filter((p) => p !== value);
-                        return { ...prev, permissions };
-                      });
-                    }}
-                    className="form-checkbox"
-                  />
-                  <span className="ml-2">Add APIs</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    value="View Reports"
-                    onChange={(e) => {
-                      const { value, checked } = e.target;
-                      setNewRole((prev) => {
-                        const permissions = checked
-                          ? [...prev.permissions, value]
-                          : prev.permissions.filter((p) => p !== value);
-                        return { ...prev, permissions };
-                      });
-                    }}
-                    className="form-checkbox"
-                  />
-                  <span className="ml-2">View Reports</span>
-                </label>
+              </tr>
+            </thead>
+            <tbody>
+              {roles.map(r => (
+                <tr key={r.id} style={{ borderBottom: '1px solid rgba(31,46,46,0.5)' }}>
+                  <td className="py-3 text-sm font-medium text-white">{r.name}</td>
+                  <td className="py-3"><div className="flex flex-wrap gap-1">{r.permissions.map(p => <span key={p} className="inline-flex px-2 py-0.5 rounded text-xs" style={{ background: 'rgba(13,148,136,0.1)', color: '#5eead4', border: '1px solid rgba(13,148,136,0.2)' }}>{p}</span>)}</div></td>
+                  <td className="py-3 text-right">
+                    <button onClick={() => setRoles(prev => prev.filter(x => x.id !== r.id))}
+                      className="text-xs px-2.5 py-1 rounded transition-colors" style={{ color: '#f87171' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.08)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="pt-4" style={{ borderTop: '1px solid #1f2e2d' }}>
+            <p className="text-xs font-semibold mb-3" style={{ color: '#2dd4bf' }}>Add New Role</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: '#2dd4bf' }}>Role Name</label>
+                <input type="text" placeholder="e.g. Security Lead" value={newRole.name} onChange={e => setNewRole(p => ({ ...p, name: e.target.value }))} style={inputStyle} onFocus={fieldFocus} onBlur={fieldBlur} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-2" style={{ color: '#2dd4bf' }}>Permissions</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {allPermissions.map(perm => (
+                    <label key={perm} className="flex items-center gap-2 cursor-pointer">
+                      <div onClick={() => togglePermission(perm)} className="w-4 h-4 rounded flex items-center justify-center cursor-pointer shrink-0 transition-all"
+                        style={newRole.permissions.includes(perm) ? { background: '#0d9488', border: '1px solid #14b8a6' } : { background: '#0a0d0d', border: '1px solid #1f2e2d' }}>
+                        {newRole.permissions.includes(perm) && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                      <span className="text-xs" style={{ color: '#99f6e4' }}>{perm}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
-            <button onClick={addRole} className="bg-blue-600 text-white px-4 py-2 rounded">
+            <button onClick={() => { if (newRole.name) { setRoles(prev => [...prev, { id: prev.length + 1, ...newRole }]); setNewRole({ name: '', permissions: [] }); } }}
+              className="mt-3 inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              style={{ background: '#0a0d0d', border: '1px solid #1f2e2d', color: '#99f6e4' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(13,148,136,0.1)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#0a0d0d'; }}>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               Add Role
             </button>
           </div>
-        </section>
-      </div>
+        </motion.div>
+      </motion.div>
     </Layout>
   );
 };
