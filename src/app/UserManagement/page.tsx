@@ -163,15 +163,6 @@ const Modal = ({
   </AnimatePresence>
 );
 
-const roles = [
-  "Admin",
-  "Security Analyst",
-  "Developer",
-  "Analyst",
-  "Tester",
-  "Engineer",
-];
-
 const UserManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -190,6 +181,9 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [userRole, setUserRole] = useState<string>("");
+  const [roles, setRoles] = useState<string[]>([
+    "Admin", "Security Analyst", "Developer", "Analyst", "Tester", "Engineer",
+  ]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -201,6 +195,15 @@ const UserManagement = () => {
         console.error(err);
       }
     }
+  }, []);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/roles`)
+      .then((r) => r.json())
+      .then((d: { roles?: string[] }) => {
+        if (d.roles?.length) setRoles(d.roles);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -245,7 +248,7 @@ const UserManagement = () => {
       });
       if (res.ok) {
         const u = await res.json();
-        setUsers((p) => [...p, u]);
+        setUsers((p) => [...p, u.user]);
         setNewUser({
           username: "",
           fullName: "",

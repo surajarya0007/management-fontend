@@ -24,6 +24,18 @@ const LoginPage: React.FC = () => {
     fullname: "",
     role: "",
   });
+  const [roleOptions, setRoleOptions] = useState<string[]>([
+    "Admin", "Security Analyst", "Developer", "Analyst", "Tester", "Engineer",
+  ]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/roles`)
+      .then((r) => r.json())
+      .then((d: { roles?: string[] }) => {
+        if (d.roles?.length) setRoleOptions(d.roles);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleToggleForm = () => {
     setIsLogin(!isLogin);
@@ -265,12 +277,9 @@ const LoginPage: React.FC = () => {
                       onBlur={e => { e.target.style.borderColor = '#1f2e2d'; }}
                     >
                       <option value="" disabled style={{ background: '#0f1314' }}>Select a role</option>
-                      <option value="Admin" style={{ background: '#0f1314' }}>Admin</option>
-                      <option value="Security Analyst" style={{ background: '#0f1314' }}>Security Analyst</option>
-                      <option value="Developer" style={{ background: '#0f1314' }}>Developer</option>
-                      <option value="Analyst" style={{ background: '#0f1314' }}>Analyst</option>
-                      <option value="Tester" style={{ background: '#0f1314' }}>Tester</option>
-                      <option value="Engineer" style={{ background: '#0f1314' }}>Engineer</option>
+                      {roleOptions.map((r) => (
+                        <option key={r} value={r} style={{ background: '#0f1314' }}>{r}</option>
+                      ))}
                     </select>
                   </div>
                 )}

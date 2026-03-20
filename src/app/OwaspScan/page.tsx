@@ -75,12 +75,20 @@ const SecurityScans: React.FC = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        setScanHistory(prev => [data.scan, ...prev]);
-        setScanMsg({ type: 'success', text: 'Scan initiated successfully!' });
-        setTimeout(() => {
-          setScanMsg(null);
-          fetchScans();
-        }, 3000);
+        if (data.scans && data.scans.length === 0) {
+          setScanMsg({ type: 'error', text: 'No APIs registered. Add APIs in the API Inventory first.' });
+        } else {
+          setScanHistory(prev => [...(data.scans ?? []), ...prev]);
+          const failed = (data.scans ?? []).filter((s: { results: string }) => s.results === 'Failed').length;
+          const total = (data.scans ?? []).length;
+          setScanMsg({
+            type: failed > 0 ? 'error' : 'success',
+            text: failed > 0
+              ? `Scan complete — ${failed} of ${total} API${total !== 1 ? 's' : ''} failed (endpoint unreachable).`
+              : `Scan complete — all ${total} API${total !== 1 ? 's' : ''} reachable.`,
+          });
+          setTimeout(() => setScanMsg(null), 5000);
+        }
       } else {
         setScanMsg({ type: 'error', text: 'Failed to initiate scan. Please try again.' });
       }
@@ -187,7 +195,7 @@ const SecurityScans: React.FC = () => {
               onMouseLeave={e => { if (!isScanning) (e.currentTarget as HTMLElement).style.background = '#0d9488'; }}
             >
               {isScanning ? (
-                <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Scanning...</>
+                <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Checking endpoints...</>
               ) : (
                 <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Initiate New Scan</>
               )}
