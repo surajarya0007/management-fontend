@@ -6,6 +6,7 @@ import { jwtDecode } from 'jwt-decode';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { springSnappy, staggerContainer, staggerItem } from '@/lib/motion';
+import { API_BASE } from '@/lib/api';
 
 interface ApiDetails {
   name: string; description: string; owner: string; version: string;
@@ -61,7 +62,7 @@ const ApiDetails = () => {
         if (id) {
           setLoading(true);
           const token = localStorage.getItem("token");
-          const res = await fetch(`https://management-backend-api.vercel.app/api/api/${id}`, {
+          const res = await fetch(`${API_BASE}/api/${id}`, {
             method: "GET", headers: { Authorization: `Bearer ${token}` },
           });
           const data: ApiDetails = await res.json();

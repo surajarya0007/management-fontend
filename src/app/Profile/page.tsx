@@ -3,8 +3,7 @@ import { useState, useEffect, ChangeEvent } from 'react';
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
 import { springSnappy, staggerContainer, staggerItem } from "@/lib/motion";
-
-const API_BASE = "https://management-backend-api.vercel.app/api";
+import { API_BASE } from "@/lib/api";
 
 interface UserInfo { username: string; email: string; fullName: string; phoneNumber: string; }
 interface PasswordInfo { currentPassword: string; newPassword: string; confirmPassword: string; }

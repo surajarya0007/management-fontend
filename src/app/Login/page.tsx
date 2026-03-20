@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { getLocalStorgeToken } from "@/components/getToken";
+import { API_BASE } from "@/lib/api";
 
 const LoginPage: React.FC = () => {
   const token = getLocalStorgeToken();
@@ -41,9 +42,9 @@ const LoginPage: React.FC = () => {
     try {
       let response;
       if (isLogin) {
-        response = await axios.post("https://management-backend-api.vercel.app/api/login", formData);
+        response = await axios.post(`${API_BASE}/login`, formData);
       } else {
-        response = await axios.post("https://management-backend-api.vercel.app/api/user/signup", formData);
+        response = await axios.post(`${API_BASE}/user/signup`, formData);
       }
       const { token } = response.data;
       if (token && typeof window !== "undefined") {

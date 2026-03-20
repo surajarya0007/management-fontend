@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerContainer, staggerItem, springSnappy } from "@/lib/motion";
+import { API_BASE } from "@/lib/api";
 
 interface Api {
   _id: string;
@@ -77,7 +78,7 @@ const ApiInventory: React.FC = () => {
   useEffect(() => {
     const fetchApiData = async () => {
       try {
-        const URL = `https://management-backend-api.vercel.app/api/${userRole}/api`;
+        const URL = `${API_BASE}/${userRole}/api`;
         const response = await fetch(URL, {
           method: "GET",
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -120,7 +121,7 @@ const ApiInventory: React.FC = () => {
     setSubmitMsg(null);
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch("https://management-backend-api.vercel.app/api/api/add", {
+      const response = await fetch(`${API_BASE}/api/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...newApi, role: userRole }),

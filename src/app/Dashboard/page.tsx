@@ -7,6 +7,7 @@ import 'chart.js/auto';
 import Link from 'next/link';
 import { jwtDecode } from "jwt-decode";
 import { staggerContainer, staggerItem, springSnappy } from "@/lib/motion";
+import { API_BASE } from "@/lib/api";
 
 interface Vulnerability {
   status: string;
@@ -106,7 +107,7 @@ const Dashboard = () => {
       if (token) {
         try {
           const decodedToken: { role: string } = jwtDecode(token);
-          const URL = `https://management-backend-api.vercel.app/api/${decodedToken.role}/api`;
+          const URL = `${API_BASE}/${decodedToken.role}/api`;
           const response = await fetch(URL, { method: "GET", headers: { Authorization: `Bearer ${token}` } });
           const data: Api[] = await response.json();
           const filteredApiInventory = data.filter(api => api.vulnerabilities?.every(v => v.status === "Closed"));
